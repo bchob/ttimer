@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>사용자 설정 파이 차트 타이머</title>
+    <title>회색이 채워지는 파이 차트 타이머</title>
     <style>
         body {
             display: flex;
@@ -21,9 +21,13 @@
             height: 200px;
             margin-bottom: 20px;
         }
+        .pie-chart__background {
+            fill: #007bff;
+        }
         .pie-chart__path {
             transform: rotate(-90deg);
             transform-origin: 50% 50%;
+            fill: #e0e0e0;
         }
         .timer-text {
             position: absolute;
@@ -47,7 +51,8 @@
 <body>
     <div class="pie-chart">
         <svg width="200" height="200" viewBox="0 0 200 200">
-            <path class="pie-chart__path" fill="#007bff" stroke="none" d="M100,100 L100,0 A100,100 0 0,1 100,200 A100,100 0 0,1 100,0"/>
+            <circle class="pie-chart__background" cx="100" cy="100" r="100" />
+            <path class="pie-chart__path" d="M100,100 L100,0 A100,100 0 0,1 100,200 A100,100 0 0,1 100,0"/>
         </svg>
         <div class="timer-text">00:00</div>
     </div>
