@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파이 차트 타이머</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+        }
+        .pie-chart {
+            position: relative;
+            width: 200px;
+            height: 200px;
+        }
+        .pie-chart__path {
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+        .timer-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="pie-chart">
+        <svg width="200" height="200" viewBox="0 0 200 200">
+            <path class="pie-chart__path" fill="#007bff" stroke="none" d="M100,100 L100,0 A100,100 0 0,1 100,200 A100,100 0 0,1 100,0"/>
+        </svg>
+        <div class="timer-text">00:00</div>
+    </div>
+
+    <script>
+        const path = document.querySelector('.pie-chart__path');
+        const timerText = document.querySelector('.timer-text');
+
+        function setProgress(percent) {
+            const angle = percent * 3.6; // 100% = 360 degrees, so 1% = 3.6 degrees
+            if (percent <= 50) {
+                path.setAttribute('d', `M100,100 L100,0 A100,100 0 ${angle > 180 ? 1 : 0},1 ${100 + 100 * Math.sin(angle * Math.PI / 180)},${100 - 100 * Math.cos(angle * Math.PI / 180)} Z`);
+            } else {
+                path.setAttribute('d', `M100,100 L100,0 A100,100 0 0,1 200,100 A100,100 0 ${angle > 270 ? 1 : 0},1 ${100 + 100 * Math.sin(angle * Math.PI / 180)},${100 - 100 * Math.cos(angle * Math.PI / 180)} Z`);
+            }
+        }
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = Math.floor(seconds % 60);
+            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer(duration) {
+            const startTime = Date.now();
+            const endTime = startTime + duration * 1000;
+
+            function update() {
+                const currentTime = Date.now();
+                const elapsedTime = currentTime - startTime;
+                const remainingTime = Math.max(0, duration - elapsedTime / 1000);
+
+                timerText.textContent = formatTime(remainingTime);
+                const progress = (elapsedTime / (duration * 1000)) * 100;
+                setProgress(progress);
+
+                if (currentTime < endTime) {
+                    requestAnimationFrame(update);
+                } else {
+                    timerText.textContent = "완료!";
+                    setProgress(100);
+                }
+            }
+
+            requestAnimationFrame(update);
+        }
+
+        // 5분 타이머 시작
+        startTimer(5 * 60);
+    </script>
+</body>
+</html>
