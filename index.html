@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>파이 차트 타이머</title>
+    <title>사용자 설정 파이 차트 타이머</title>
     <style>
         body {
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             height: 100vh;
@@ -18,6 +19,7 @@
             position: relative;
             width: 200px;
             height: 200px;
+            margin-bottom: 20px;
         }
         .pie-chart__path {
             transform: rotate(-90deg);
@@ -31,6 +33,15 @@
             font-size: 2em;
             font-weight: bold;
         }
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        input, button {
+            font-size: 1em;
+            padding: 5px 10px;
+        }
     </style>
 </head>
 <body>
@@ -40,13 +51,21 @@
         </svg>
         <div class="timer-text">00:00</div>
     </div>
+    <div class="controls">
+        <input type="number" id="minutes-input" min="1" value="5" placeholder="분">
+        <button id="start-button">시작</button>
+    </div>
 
     <script>
         const path = document.querySelector('.pie-chart__path');
         const timerText = document.querySelector('.timer-text');
+        const minutesInput = document.getElementById('minutes-input');
+        const startButton = document.getElementById('start-button');
+
+        let animationFrameId = null;
 
         function setProgress(percent) {
-            const angle = percent * 3.6; // 100% = 360 degrees, so 1% = 3.6 degrees
+            const angle = percent * 3.6;
             if (percent <= 50) {
                 path.setAttribute('d', `M100,100 L100,0 A100,100 0 ${angle > 180 ? 1 : 0},1 ${100 + 100 * Math.sin(angle * Math.PI / 180)},${100 - 100 * Math.cos(angle * Math.PI / 180)} Z`);
             } else {
@@ -74,18 +93,27 @@
                 setProgress(progress);
 
                 if (currentTime < endTime) {
-                    requestAnimationFrame(update);
+                    animationFrameId = requestAnimationFrame(update);
                 } else {
                     timerText.textContent = "완료!";
                     setProgress(100);
                 }
             }
 
-            requestAnimationFrame(update);
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            animationFrameId = requestAnimationFrame(update);
         }
 
-        // 5분 타이머 시작
-        startTimer(5 * 60);
+        startButton.addEventListener('click', () => {
+            const duration = parseInt(minutesInput.value) * 60;
+            startTimer(duration);
+        });
+
+        // 초기 상태 설정
+        setProgress(0);
+        timerText.textContent = "00:00";
     </script>
 </body>
 </html>
