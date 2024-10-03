@@ -68,6 +68,7 @@
         const startButton = document.getElementById('start-button');
 
         let animationFrameId = null;
+        let wakeLock = null;  // Wake Lock 변수 추가
 
         function setProgress(percent) {
             const angle = percent * 3.6;
@@ -82,6 +83,25 @@
             const minutes = Math.floor(seconds / 60);
             const remainingSeconds = Math.floor(seconds % 60);
             return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+
+        // Wake Lock 요청 함수
+        async function requestWakeLock() {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                console.log('화면 꺼짐 방지 활성화됨');
+            } catch (err) {
+                console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+            }
+        }
+
+        // Wake Lock 해제 함수
+        async function releaseWakeLock() {
+            if (wakeLock) {
+                await wakeLock.release();
+                wakeLock = null;
+                console.log('화면 꺼짐 방지 비활성화됨');
+            }
         }
 
         function startTimer(duration) {
@@ -102,18 +122,33 @@
                 } else {
                     timerText.textContent = "완료!";
                     setProgress(100);
+                    releaseWakeLock();  // 타이머가 완료되면 Wake Lock 해제
                 }
             }
 
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
             }
+
+            // 타이머 시작 시 Wake Lock 요청
+            requestWakeLock();
             animationFrameId = requestAnimationFrame(update);
         }
 
         startButton.addEventListener('click', () => {
             const duration = parseInt(minutesInput.value) * 60;
             startTimer(duration);
+        });
+
+        // 페이지 숨김 여부에 따라 Wake Lock 해제
+        document.addEventListener('visibilitychange', async () => {
+            if (document.visibilityState === 'visible' && animationFrameId) {
+                // 페이지가 다시 보이면 Wake Lock 재요청
+                requestWakeLock();
+            } else {
+                // 페이지가 숨겨지면 Wake Lock 해제
+                await releaseWakeLock();
+            }
         });
 
         // 초기 상태 설정
