@@ -54,21 +54,25 @@
             <circle class="pie-chart__background" cx="100" cy="100" r="100" />
             <path class="pie-chart__path" d="M100,100 L100,0 A100,100 0 0,1 100,200 A100,100 0 0,1 100,0"/>
         </svg>
-        <div class="timer-text">00:00</div>
+        <div class="timer-text">00:00:00</div>
     </div>
     <div class="controls">
-        <input type="number" id="minutes-input" min="1" value="5" placeholder="분">
+        <input type="number" id="hours-input" min="0" value="0" placeholder="시">
+        <input type="number" id="minutes-input" min="0" value="5" placeholder="분">
+        <input type="number" id="seconds-input" min="0" value="0" placeholder="초">
         <button id="start-button">시작</button>
     </div>
 
     <script>
         const path = document.querySelector('.pie-chart__path');
         const timerText = document.querySelector('.timer-text');
+        const hoursInput = document.getElementById('hours-input');
         const minutesInput = document.getElementById('minutes-input');
+        const secondsInput = document.getElementById('seconds-input');
         const startButton = document.getElementById('start-button');
 
         let animationFrameId = null;
-        let wakeLock = null;  // Wake Lock 변수 추가
+        let wakeLock = null;
 
         function setProgress(percent) {
             const angle = percent * 3.6;
@@ -80,12 +84,12 @@
         }
 
         function formatTime(seconds) {
-            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(seconds / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
             const remainingSeconds = Math.floor(seconds % 60);
-            return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
         }
 
-        // Wake Lock 요청 함수
         async function requestWakeLock() {
             try {
                 wakeLock = await navigator.wakeLock.request('screen');
@@ -95,7 +99,6 @@
             }
         }
 
-        // Wake Lock 해제 함수
         async function releaseWakeLock() {
             if (wakeLock) {
                 await wakeLock.release();
@@ -122,7 +125,7 @@
                 } else {
                     timerText.textContent = "완료!";
                     setProgress(100);
-                    releaseWakeLock();  // 타이머가 완료되면 Wake Lock 해제
+                    releaseWakeLock();
                 }
             }
 
@@ -130,30 +133,32 @@
                 cancelAnimationFrame(animationFrameId);
             }
 
-            // 타이머 시작 시 Wake Lock 요청
             requestWakeLock();
             animationFrameId = requestAnimationFrame(update);
         }
 
         startButton.addEventListener('click', () => {
-            const duration = parseInt(minutesInput.value) * 60;
-            startTimer(duration);
+            const hours = parseInt(hoursInput.value) || 0;
+            const minutes = parseInt(minutesInput.value) || 0;
+            const seconds = parseInt(secondsInput.value) || 0;
+            const duration = hours * 3600 + minutes * 60 + seconds;
+            if (duration > 0) {
+                startTimer(duration);
+            } else {
+                alert("시간을 설정해주세요.");
+            }
         });
 
-        // 페이지 숨김 여부에 따라 Wake Lock 해제
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState === 'visible' && animationFrameId) {
-                // 페이지가 다시 보이면 Wake Lock 재요청
                 requestWakeLock();
             } else {
-                // 페이지가 숨겨지면 Wake Lock 해제
                 await releaseWakeLock();
             }
         });
 
-        // 초기 상태 설정
         setProgress(0);
-        timerText.textContent = "00:00";
+        timerText.textContent = "00:00:00";
     </script>
 </body>
 </html>
