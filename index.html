@@ -63,6 +63,7 @@
         <button id="start-button">시작</button>
         <button id="stop-button" disabled>정지</button>
         <button id="reset-button">리셋</button>
+        <button id="add-time-button">시간 추가</button>
     </div>
 
     <script>
@@ -74,10 +75,11 @@
         const startButton = document.getElementById('start-button');
         const stopButton = document.getElementById('stop-button');
         const resetButton = document.getElementById('reset-button');
+        const addTimeButton = document.getElementById('add-time-button');
 
         let animationFrameId = null;
         let wakeLock = null;
-        let startTime, pausedTime, duration, isPaused = false;
+        let startTime, duration, remainingTime, elapsedTime = 0, isPaused = true;
 
         function setProgress(percent) {
             const angle = percent * 3.6;
@@ -114,16 +116,16 @@
 
         function startTimer() {
             if (isPaused) {
-                startTime = Date.now() - (pausedTime - startTime);
+                startTime = Date.now() - (duration - remainingTime) * 1000;
             } else {
-                startTime = Date.now();
+                startTime = Date.now() - elapsedTime;
             }
             isPaused = false;
 
             function update() {
                 const currentTime = Date.now();
-                const elapsedTime = currentTime - startTime;
-                const remainingTime = Math.max(0, duration - elapsedTime / 1000);
+                elapsedTime = currentTime - startTime;
+                remainingTime = Math.max(0, duration - elapsedTime / 1000);
 
                 timerText.textContent = formatTime(remainingTime);
                 const progress = (elapsedTime / (duration * 1000)) * 100;
@@ -137,6 +139,8 @@
                     releaseWakeLock();
                     startButton.disabled = false;
                     stopButton.disabled = true;
+                    isPaused = true;
+                    elapsedTime = 0;
                 }
             }
 
@@ -156,7 +160,6 @@
                 animationFrameId = null;
             }
             isPaused = true;
-            pausedTime = Date.now();
             releaseWakeLock();
             startButton.disabled = false;
             stopButton.disabled = true;
@@ -167,7 +170,10 @@
                 cancelAnimationFrame(animationFrameId);
                 animationFrameId = null;
             }
-            isPaused = false;
+            isPaused = true;
+            elapsedTime = 0;
+            duration = 0;
+            remainingTime = 0;
             setProgress(0);
             timerText.textContent = "00:00:00";
             releaseWakeLock();
@@ -175,20 +181,48 @@
             stopButton.disabled = true;
         }
 
-        startButton.addEventListener('click', () => {
-            const hours = parseInt(hoursInput.value) || 0;
-            const minutes = parseInt(minutesInput.value) || 0;
-            const seconds = parseInt(secondsInput.value) || 0;
-            duration = hours * 3600 + minutes * 60 + seconds;
-            if (duration > 0) {
+        function addTime() {
+            const additionalHours = parseInt(hoursInput.value) || 0;
+            const additionalMinutes = parseInt(minutesInput.value) || 0;
+            const additionalSeconds = parseInt(secondsInput.value) || 0;
+            const additionalTime = additionalHours * 3600 + additionalMinutes * 60 + additionalSeconds;
+
+            if (additionalTime > 0) {
+                if (isPaused) {
+                    remainingTime = (remainingTime || 0) + additionalTime;
+                } else {
+                    remainingTime = Math.max(0, remainingTime) + additionalTime;
+                }
+                duration = remainingTime;
+                elapsedTime = 0;
+                hoursInput.value = minutesInput.value = secondsInput.value = 0;
                 startTimer();
             } else {
-                alert("시간을 설정해주세요.");
+                alert("추가할 시간을 설정해주세요.");
+            }
+        }
+
+        startButton.addEventListener('click', () => {
+            if (isPaused && remainingTime > 0) {
+                startTimer();
+            } else {
+                const hours = parseInt(hoursInput.value) || 0;
+                const minutes = parseInt(minutesInput.value) || 0;
+                const seconds = parseInt(secondsInput.value) || 0;
+                duration = hours * 3600 + minutes * 60 + seconds;
+                if (duration > 0) {
+                    remainingTime = duration;
+                    elapsedTime = 0;
+                    startTimer();
+                } else {
+                    alert("시간을 설정해주세요.");
+                }
             }
         });
 
         stopButton.addEventListener('click', stopTimer);
         resetButton.addEventListener('click', resetTimer);
+        addTimeButton.addEventListener('click', addTime);
 
         document.addEventListener('visibilitychange', async () => {
             if (document.visibilityState === 'visible' && animationFrameId) {
