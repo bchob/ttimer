@@ -10,10 +10,19 @@
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
             margin: 0;
             font-family: Arial, sans-serif;
             background-color: #f0f0f0;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            box-sizing: border-box;
         }
         .pie-chart {
             position: relative;
@@ -39,200 +48,365 @@
         }
         .controls {
             display: flex;
+            flex-wrap: wrap;
             gap: 10px;
+            justify-content: center;
             margin-top: 20px;
+            width: 100%;
         }
         input, button {
             font-size: 1em;
             padding: 5px 10px;
+            flex: 1 0 calc(33.333% - 10px);
+            max-width: calc(33.333% - 10px);
+            box-sizing: border-box;
+        }
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            .pie-chart {
+                width: 150px;
+                height: 150px;
+            }
+            .timer-text {
+                font-size: 1.5em;
+            }
+            input, button {
+                flex: 1 0 calc(50% - 5px);
+                max-width: calc(50% - 5px);
+            }
+        }
+        @media (orientation: landscape) and (max-height: 500px) {
+            .container {
+                flex-direction: row;
+                justify-content: space-around;
+            }
+            .pie-chart {
+                margin-bottom: 0;
+                margin-right: 20px;
+            }
+            .controls {
+                width: 50%;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="pie-chart">
-        <svg width="200" height="200" viewBox="0 0 200 200">
-            <circle class="pie-chart__background" cx="100" cy="100" r="100" />
-            <path class="pie-chart__path" d="M100,100 L100,0 A100,100 0 0,1 100,200 A100,100 0 0,1 100,0"/>
-        </svg>
-        <div class="timer-text">00:00:00</div>
-    </div>
-    <div class="controls">
-        <input type="number" id="hours-input" min="0" value="0" placeholder="시">
-        <input type="number" id="minutes-input" min="0" value="5" placeholder="분">
-        <input type="number" id="seconds-input" min="0" value="0" placeholder="초">
-        <button id="start-button">시작</button>
-        <button id="stop-button" disabled>정지</button>
-        <button id="reset-button">리셋</button>
-        <button id="add-time-button">시간 추가</button>
+    <div class="container">
+        <div class="pie-chart">
+            <svg width="100%" height="100%" viewBox="0 0 200 200">
+                <circle class="pie-chart__background" cx="100" cy="100" r="100" />
+                <path class="pie-chart__path" d="M100,100 L100,0 A100,100 0 0,1 100,200 A100,100 0 0,1 100,0"/>
+            </svg>
+            <div class="timer-text">00:00:00</div>
+        </div>
+        <div class="controls">
+            <input type="number" id="hours-input" min="0" value="0" placeholder="시">
+            <input type="number" id="minutes-input" min="0" value="5" placeholder="분">
+            <input type="number" id="seconds-input" min="0" value="0" placeholder="초">
+            <button id="start-button">시작</button>
+            <button id="stop-button" disabled>정지</button>
+            <button id="reset-button">리셋</button>
+            <button id="add-time-button">시간 추가</button>
+        </div>
     </div>
 
     <script>
         const path = document.querySelector('.pie-chart__path');
+
         const timerText = document.querySelector('.timer-text');
+
         const hoursInput = document.getElementById('hours-input');
+
         const minutesInput = document.getElementById('minutes-input');
+
         const secondsInput = document.getElementById('seconds-input');
+
         const startButton = document.getElementById('start-button');
+
         const stopButton = document.getElementById('stop-button');
+
         const resetButton = document.getElementById('reset-button');
+
         const addTimeButton = document.getElementById('add-time-button');
 
         let animationFrameId = null;
+
         let wakeLock = null;
+
         let startTime, duration, remainingTime, elapsedTime = 0, isPaused = true;
 
         function setProgress(percent) {
+
             const angle = percent * 3.6;
+
             if (percent <= 50) {
+
                 path.setAttribute('d', `M100,100 L100,0 A100,100 0 ${angle > 180 ? 1 : 0},1 ${100 + 100 * Math.sin(angle * Math.PI / 180)},${100 - 100 * Math.cos(angle * Math.PI / 180)} Z`);
+
             } else {
+
                 path.setAttribute('d', `M100,100 L100,0 A100,100 0 0,1 200,100 A100,100 0 ${angle > 270 ? 1 : 0},1 ${100 + 100 * Math.sin(angle * Math.PI / 180)},${100 - 100 * Math.cos(angle * Math.PI / 180)} Z`);
+
             }
+
         }
 
         function formatTime(seconds) {
+
             const hours = Math.floor(seconds / 3600);
+
             const minutes = Math.floor((seconds % 3600) / 60);
+
             const remainingSeconds = Math.floor(seconds % 60);
+
             return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+
         }
 
         async function requestWakeLock() {
+
             try {
+
                 wakeLock = await navigator.wakeLock.request('screen');
+
                 console.log('화면 꺼짐 방지 활성화됨');
+
             } catch (err) {
+
                 console.error(`Wake Lock error: ${err.name}, ${err.message}`);
+
             }
+
         }
 
         async function releaseWakeLock() {
+
             if (wakeLock) {
+
                 await wakeLock.release();
+
                 wakeLock = null;
+
                 console.log('화면 꺼짐 방지 비활성화됨');
+
             }
+
         }
 
         function startTimer() {
+
             if (isPaused) {
+
                 startTime = Date.now() - (duration - remainingTime) * 1000;
+
             } else {
+
                 startTime = Date.now() - elapsedTime;
+
             }
+
             isPaused = false;
 
             function update() {
+
                 const currentTime = Date.now();
+
                 elapsedTime = currentTime - startTime;
+
                 remainingTime = Math.max(0, duration - elapsedTime / 1000);
 
                 timerText.textContent = formatTime(remainingTime);
+
                 const progress = (elapsedTime / (duration * 1000)) * 100;
+
                 setProgress(progress);
 
                 if (remainingTime > 0) {
+
                     animationFrameId = requestAnimationFrame(update);
+
                 } else {
+
                     timerText.textContent = "완료!";
+
                     setProgress(100);
+
                     releaseWakeLock();
+
                     startButton.disabled = false;
+
                     stopButton.disabled = true;
+
                     isPaused = true;
+
                     elapsedTime = 0;
+
                 }
+
             }
 
             if (animationFrameId) {
+
                 cancelAnimationFrame(animationFrameId);
+
             }
 
             requestWakeLock();
+
             animationFrameId = requestAnimationFrame(update);
+
             startButton.disabled = true;
+
             stopButton.disabled = false;
+
         }
 
         function stopTimer() {
+
             if (animationFrameId) {
+
                 cancelAnimationFrame(animationFrameId);
+
                 animationFrameId = null;
+
             }
+
             isPaused = true;
+
             releaseWakeLock();
+
             startButton.disabled = false;
+
             stopButton.disabled = true;
+
         }
 
         function resetTimer() {
+
             if (animationFrameId) {
+
                 cancelAnimationFrame(animationFrameId);
+
                 animationFrameId = null;
+
             }
+
             isPaused = true;
+
             elapsedTime = 0;
+
             duration = 0;
+
             remainingTime = 0;
+
             setProgress(0);
+
             timerText.textContent = "00:00:00";
+
             releaseWakeLock();
+
             startButton.disabled = false;
+
             stopButton.disabled = true;
+
         }
 
         function addTime() {
+
             const additionalHours = parseInt(hoursInput.value) || 0;
+
             const additionalMinutes = parseInt(minutesInput.value) || 0;
+
             const additionalSeconds = parseInt(secondsInput.value) || 0;
+
             const additionalTime = additionalHours * 3600 + additionalMinutes * 60 + additionalSeconds;
 
             if (additionalTime > 0) {
+
                 if (isPaused) {
+
                     remainingTime = (remainingTime || 0) + additionalTime;
+
                 } else {
+
                     remainingTime = Math.max(0, remainingTime) + additionalTime;
+
                 }
+
                 duration = remainingTime;
+
                 elapsedTime = 0;
+
                 hoursInput.value = minutesInput.value = secondsInput.value = 0;
+
                 startTimer();
+
             } else {
+
                 alert("추가할 시간을 설정해주세요.");
+
             }
+
         }
 
         startButton.addEventListener('click', () => {
+
             if (isPaused && remainingTime > 0) {
+
                 startTimer();
+
             } else {
+
                 const hours = parseInt(hoursInput.value) || 0;
+
                 const minutes = parseInt(minutesInput.value) || 0;
+
                 const seconds = parseInt(secondsInput.value) || 0;
+
                 duration = hours * 3600 + minutes * 60 + seconds;
+
                 if (duration > 0) {
+
                     remainingTime = duration;
+
                     elapsedTime = 0;
+
                     startTimer();
+
                 } else {
+
                     alert("시간을 설정해주세요.");
+
                 }
+
             }
+
         });
 
         stopButton.addEventListener('click', stopTimer);
+
         resetButton.addEventListener('click', resetTimer);
+
         addTimeButton.addEventListener('click', addTime);
 
         document.addEventListener('visibilitychange', async () => {
+
             if (document.visibilityState === 'visible' && animationFrameId) {
+
                 requestWakeLock();
+
             } else {
+
                 await releaseWakeLock();
+
             }
+
         });
 
         setProgress(0);
+
         timerText.textContent = "00:00:00";
     </script>
 </body>
